@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // 인천국제공항 좌표
+        const ICN_COORDS = [37.469075, 126.450517];
+        
+        // 지도 초기화
+        const map = L.map('map').setView(ICN_COORDS, 6);
+
+        // OpenStreetMap 타일 추가
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+        }).addTo(map);
+
+        // 항공기 데이터 가져오기 함수
+        async function fetchFlights() {
+            const username = 'HyuU';
+            const password = 'qwer1234';
+            const base64Credentials = btoa(`${username}:${password}`);
+            
+            const bounds = {
+                lamin: ICN_COORDS[0] - 9.0, // 대략적인 위도 경도 계산
+                lomin: ICN_COORDS[1] - 9.0,
+                lamax: ICN_COORDS[0] + 9.0,
+                lomax: ICN_COORDS[1] + 9.0
+            };
+            
+            try {
+                const response = await fetch(`https://opensky-network.org/api/states/all?lamin=${bounds.lamin}&lomin=${bounds.lomin}&lamax=${bounds.lamax}&lomax=${bounds.lomax}`, {
+                    headers: {
+                        'Authorization': `Basic ${base64Credentials}`
+                    }
+                });
+                const data = await response.json();
+                
+                // 항공기 위치를 지도에 표시
+                data.states.forEach(plane => {
+                    const lat = plane[6];
+                    const lon = plane[5];
+                    
+                    if (lat && lon) {
+                        L.marker([lat, lon]).addTo(map)
+                          .bindPopup(`Flight: ${plane[1]}`);
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching flight data:', error);
+            }
+        }
+
+        // 일정 간격으로 항공기 데이터 업데이트 (60초 마다)
+        setInterval(fetchFlights, 3000);
+
+        // 초기 항공기 데이터 로드
+        fetchFlights();
+    </script>
+</body>
+</html>
